@@ -18,6 +18,7 @@ class User extends Authenticatable
         'role',
         'picture',
         'learning_streak',
+        'last_activity_date',
     ];
 
     protected $hidden = [
@@ -28,7 +29,35 @@ class User extends Authenticatable
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'last_activity_date' => 'date',
     ];
+
+    /**
+     * Update learning streak based on consecutive days of activity
+     * Call this when user watches a lesson or interacts with course content
+     */
+    public function updateLearningStreak(): void
+    {
+        $today = now()->toDateString();
+        $lastActivity = $this->last_activity_date;
+
+        if ($lastActivity === null) {
+            // First time activity
+            $this->learning_streak = 1;
+        } elseif ($lastActivity === $today) {
+            // Already logged activity today - no change
+            return;
+        } elseif ($lastActivity === now()->subDay()->toDateString()) {
+            // Consecutive day - increment streak
+            $this->learning_streak += 1;
+        } else {
+            // Streak broken - reset to 1
+            $this->learning_streak = 1;
+        }
+
+        $this->last_activity_date = $today;
+        $this->save();
+    }
 
     // For instructors - courses they teach
     public function courses(): HasMany

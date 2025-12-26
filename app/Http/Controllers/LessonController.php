@@ -24,6 +24,9 @@ class LessonController extends Controller
                            ->with('error', 'You must be enrolled to view this lesson.');
         }
 
+        // Update learning streak for consecutive day tracking
+        auth()->user()->updateLearningStreak();
+
         // Use the learn view (LessonPlayer)
         return view('courses.learn', [
             'data' => [

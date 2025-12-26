@@ -12935,3 +12935,8 @@
 [2025-12-26 09:33:24] local.INFO: Session regenerated  
 [2025-12-26 09:33:24] local.INFO: User authenticated {"user_id":7,"role":"instructor"} 
 [2025-12-26 09:33:24] local.INFO: Redirecting instructor to dashboard  
+[2025-12-26 18:14:35] local.INFO: Login attempt {"email":"softmartpersonal@gmail.com"} 
+[2025-12-26 18:14:39] local.INFO: Auth::attempt succeeded  
+[2025-12-26 18:14:39] local.INFO: Session regenerated  
+[2025-12-26 18:14:39] local.INFO: User authenticated {"user_id":5,"role":"student"} 
+[2025-12-26 18:14:39] local.INFO: Redirecting student to dashboard  

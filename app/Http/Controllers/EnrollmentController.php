@@ -80,6 +80,10 @@ class EnrollmentController extends Controller
         if ($enrollment) {
             $enrollment->progress = $request->progress;
             $enrollment->save();
+            
+            // Update learning streak for consecutive day tracking
+            $student->updateLearningStreak();
+            
             return response()->json(['message' => 'Progress updated', 'progress' => $enrollment->progress]);
         }
 
