@@ -43,7 +43,7 @@
         user: <?php echo json_encode($userData, 15, 512) ?>,
         dashboardData: {
             enrolledCourses: <?php echo json_encode($enrolledCoursesData, 15, 512) ?>,
-            completedCourses: [],
+            completedCourses: <?php echo json_encode($completedCoursesData, 15, 512) ?>,
             notifications: <?php echo json_encode($notificationsData, 15, 512) ?>,
             stats: {
                 'ongoingCourses': <?php echo e($ongoingCourses); ?>,
@@ -52,7 +52,10 @@
                 'certificatesEarned': <?php echo e($certificatesEarned); ?>
 
             },
-            courseProgress: <?php echo json_encode($courseProgress, 15, 512) ?>
+            courseProgress: <?php echo json_encode($courseProgress, 15, 512) ?>,
+            leaderboard: <?php echo json_encode($leaderboard, 15, 512) ?>,
+            currentUserPoints: <?php echo e($currentUserPoints); ?>
+
         }
     });
 </script>

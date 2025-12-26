@@ -20,6 +20,14 @@ interface StudentDashboardProps {
             certificatesEarned: number;
         };
         courseProgress?: Record<number, number>;
+        leaderboard?: {
+            id: number;
+            name: string;
+            points: number;
+            streak: number;
+            lessonsCompleted: number;
+        }[];
+        currentUserPoints?: number;
     };
 }
 
@@ -31,8 +39,17 @@ export function StudentDashboard({ onNavigate, user, data }: StudentDashboardPro
 
     const notifications = data?.notifications || [];
 
-    const leaderboard = [
-        { rank: 1, name: "You", points: 0, avatar: "ME", isCurrentUser: true },
+    // Process leaderboard data
+    const rawLeaderboard = data?.leaderboard || [];
+    // If empty (e.g. fresh db), add current user placeholder if logged in
+    const displayLeaderboard = rawLeaderboard.length > 0 ? rawLeaderboard.map((item, index) => ({
+        rank: index + 1,
+        name: item.id === user?.id ? "You" : item.name,
+        points: item.points,
+        avatar: item.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+        isCurrentUser: item.id === user?.id,
+    })) : [
+        { rank: 1, name: "You", points: data?.currentUserPoints || 0, avatar: user?.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || "ME", isCurrentUser: true }
     ];
 
     const stats = [
@@ -265,7 +282,7 @@ export function StudentDashboard({ onNavigate, user, data }: StudentDashboardPro
                                 <h3 className="text-lg font-semibold">Leaderboard</h3>
                             </div>
                             <div className="space-y-3">
-                                {leaderboard.map((user) => (
+                                {displayLeaderboard.map((user) => (
                                     <div
                                         key={user.rank}
                                         className={`flex items-center gap-3 p-3 rounded-lg ${user.isCurrentUser ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'

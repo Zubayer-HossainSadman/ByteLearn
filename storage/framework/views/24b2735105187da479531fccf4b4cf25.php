@@ -19,8 +19,8 @@
             'students' => $course->enrollments->count(),
             'status' => ucfirst($course->status),
             'completionRate' => 0,
-            'rating' => 4.5,
-            'reviews' => 0,
+            'rating' => $course->averageRating(),
+            'reviews' => $course->totalReviews(),
             'revenue' => '$0',
             'lessons' => $course->lessons->count(),
             'lastUpdated' => $course->updated_at->diffForHumans()
@@ -38,7 +38,8 @@
                 'totalStudents': <?php echo e($totalStudents); ?>,
                 'totalCourses': <?php echo e($totalCourses); ?>,
                 'totalLessons': <?php echo e($totalLessons); ?>,
-                'avgRating': 4.8
+                'avgRating': <?php echo e($averageRating); ?>
+
             }
         }
     });

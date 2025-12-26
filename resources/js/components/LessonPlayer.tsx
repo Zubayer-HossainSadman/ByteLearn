@@ -17,6 +17,13 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
     const [loading, setLoading] = useState(true);
     const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
     const [isVideoCompleted, setIsVideoCompleted] = useState(false);
+
+    // Rating State
+    const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [ratingComment, setRatingComment] = useState('');
+
     const playerRef = useRef<HTMLDivElement>(null);
     const isInstructor = user?.role === 'instructor';
 
@@ -97,6 +104,20 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
                 progress: progressPercent
             });
         } catch (err) { console.error(err); }
+    };
+
+    const submitRating = async () => {
+        try {
+            await axios.post(`/student/course/${courseId}/review`, {
+                rating,
+                comment: ratingComment
+            });
+            setIsRatingModalOpen(false);
+            alert("Thank you for your feedback!");
+        } catch (error) {
+            console.error(error);
+            alert("Failed to submit review. Please try again.");
+        }
     };
 
     return (
@@ -204,16 +225,76 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
                             <Button onClick={() => { handleLessonChange(nextLesson); updateProgress(); }}>Next Lesson →</Button>
                         ) : (
                             !isInstructor && (
-                                <form method="POST" action={`/student/course/${courseId}/complete`}>
-                                    <input type="hidden" name="_token" value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''} />
-                                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                                        🎓 Complete Course & Get Certificate
+                                <div className="flex flex-col gap-3 w-full sm:w-auto">
+                                    <form method="POST" action={`/student/course/${courseId}/complete`} className="w-full">
+                                        <input type="hidden" name="_token" value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''} />
+                                        <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
+                                            🎓 Complete Course & Get Certificate
+                                        </Button>
+                                    </form>
+                                    <Button variant="outline" onClick={() => setIsRatingModalOpen(true)} className="w-full">
+                                        ⭐ Rate this Course
                                     </Button>
-                                </form>
+                                </div>
                             )
                         )}
                     </div>
                 </div>
+
+                {/* Rating Modal */}
+                {isRatingModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl max-w-md w-full p-6 animate-scale-in">
+                            <h3 className="text-xl font-bold mb-2">Rate this Course</h3>
+                            <p className="text-gray-600 mb-6">How was your learning experience? Your feedback helps us improve.</p>
+
+                            <div className="flex justify-center gap-2 mb-6">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setRating(star)}
+                                        onMouseEnter={() => setHoverRating(star)}
+                                        onMouseLeave={() => setHoverRating(0)}
+                                        className="transition-transform hover:scale-110 focus:outline-none"
+                                    >
+                                        <svg
+                                            className={`w-10 h-10 ${star <= (hoverRating || rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <textarea
+                                className="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Tell us what you liked or how we can improve (optional)"
+                                rows={3}
+                                value={ratingComment}
+                                onChange={(e) => setRatingComment(e.target.value)}
+                            ></textarea>
+
+                            <div className="flex gap-3">
+                                <Button variant="outline" onClick={() => setIsRatingModalOpen(false)} className="flex-1">Skip</Button>
+                                <Button
+                                    onClick={submitRating}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                    disabled={rating === 0}
+                                >
+                                    Submit Review
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

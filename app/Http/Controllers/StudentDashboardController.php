@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -42,6 +43,41 @@ class StudentDashboardController extends Controller
             $notifications = collect([]);
         }
 
+        // Get leaderboard - top students by points
+        $leaderboard = User::where('role', 'student')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'points' => $user->getLeaderboardPoints(),
+                    'streak' => $user->learning_streak ?? 0,
+                    'lessonsCompleted' => $user->getTotalLessonsCompleted(),
+                ];
+            })
+            ->sortByDesc('points')
+            ->take(10)
+            ->values();
+
+        // Format Completed Courses Data for React
+        $learningStreak = $student->learning_streak ?? 0;
+        $certificatesEarned = $completedCourses;
+        
+        $completedCoursesData = $student->certificates()->with(['course.reviews' => function($query) use ($student) {
+            $query->where('user_id', $student->id);
+        }])->get()->map(function($cert) {
+            $userReview = $cert->course->reviews->first();
+            return [
+                'id' => $cert->course->id,
+                'title' => $cert->course->title,
+                'instructor' => $cert->course->instructor->name ?? 'Instructor',
+                'completedDate' => $cert->created_at->format('M d, Y'),
+                'rating' => $userReview ? $userReview->rating : 0,
+                'certificate' => true,
+                'certificateId' => $cert->id
+            ];
+        });
+
         return view('student.dashboard', [
             'student' => $student,
             'enrolledCourses' => $enrolledCourses,
@@ -51,6 +87,9 @@ class StudentDashboardController extends Controller
             'learningStreak' => $learningStreak,
             'certificatesEarned' => $certificatesEarned,
             'notifications' => $notifications,
+            'leaderboard' => $leaderboard,
+            'currentUserPoints' => $student->getLeaderboardPoints(),
+            'completedCoursesData' => $completedCoursesData
         ]);
     }
 

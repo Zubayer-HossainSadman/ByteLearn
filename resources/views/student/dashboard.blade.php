@@ -43,7 +43,7 @@
         user: @json($userData),
         dashboardData: {
             enrolledCourses: @json($enrolledCoursesData),
-            completedCourses: [],
+            completedCourses: @json($completedCoursesData),
             notifications: @json($notificationsData),
             stats: {
                 'ongoingCourses': {{ $ongoingCourses }},
@@ -51,7 +51,9 @@
                 'learningStreak': {{ $learningStreak }},
                 'certificatesEarned': {{ $certificatesEarned }}
             },
-            courseProgress: @json($courseProgress)
+            courseProgress: @json($courseProgress),
+            leaderboard: @json($leaderboard),
+            currentUserPoints: {{ $currentUserPoints }}
         }
     });
 </script>

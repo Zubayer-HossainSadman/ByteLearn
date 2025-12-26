@@ -32,12 +32,24 @@ class InstructorDashboardController extends Controller
             return $course->lessons->count();
         });
 
+        // Calculate Average Rating across all courses
+        $totalReviews = $courses->sum(function($course) {
+            return $course->reviews->count();
+        });
+        
+        $sumRatings = $courses->sum(function($course) {
+            return $course->reviews->sum('rating');
+        });
+        
+        $averageRating = $totalReviews > 0 ? round($sumRatings / $totalReviews, 1) : 0;
+
         return view('instructor.dashboard', [
             'instructor' => $instructor,
             'courses' => $courses,
             'totalCourses' => $totalCourses,
             'totalStudents' => $totalStudents,
             'totalLessons' => $totalLessons,
+            'averageRating' => $averageRating,
         ]);
     }
 

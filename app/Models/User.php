@@ -129,4 +129,33 @@ class User extends Authenticatable
         $completed = $this->getTotalCompletedCourses();
         return round(($completed / $total) * 100, 2);
     }
+
+    /**
+     * Get total lessons completed by this user (based on progress across enrollments)
+     */
+    public function getTotalLessonsCompleted(): int
+    {
+        $total = 0;
+        foreach ($this->enrollments()->with('course.lessons')->get() as $enrollment) {
+            $lessonsCount = $enrollment->course->lessons->count();
+            if ($lessonsCount > 0) {
+                $completed = (int) floor(($enrollment->progress / 100) * $lessonsCount);
+                $total += $completed;
+            }
+        }
+        return $total;
+    }
+
+    /**
+     * Calculate leaderboard points
+     * Points = (learning_streak * 10) + (lessons_completed * 5) + (certificates * 50)
+     */
+    public function getLeaderboardPoints(): int
+    {
+        $streakPoints = ($this->learning_streak ?? 0) * 10;
+        $lessonPoints = $this->getTotalLessonsCompleted() * 5;
+        $certificatePoints = $this->getTotalCompletedCourses() * 50;
+
+        return $streakPoints + $lessonPoints + $certificatePoints;
+    }
 }

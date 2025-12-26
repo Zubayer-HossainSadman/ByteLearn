@@ -11,6 +11,7 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\DiscussionController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\ReviewController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -70,6 +71,9 @@ Route::prefix('student')
         
         // Course Completion
         Route::post('/course/{courseId}/complete', [CertificateController::class, 'completeCourse'])->name('student.course.complete');
+        
+        // Course Rating
+        Route::post('/course/{courseId}/review', [ReviewController::class, 'store'])->name('student.course.review');
     });
 
 // Instructor Routes
