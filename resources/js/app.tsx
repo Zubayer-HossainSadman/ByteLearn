@@ -7,12 +7,13 @@ import { CourseEditor } from './components/CourseEditor';
 import { LessonPlayer } from './components/LessonPlayer';
 import { CourseCatalog } from './components/CourseCatalog';
 import { CertificatesPage } from './components/CertificatesPage';
+import { InstructorAnalytics } from './components/InstructorAnalytics';
 import { LoginForm } from './components/auth/LoginForm';
 import { RegisterForm } from './components/auth/RegisterForm';
 
 import { CourseDetails } from './components/CourseDetails';
 
-type Page = 'home' | 'student-dashboard' | 'instructor-dashboard' | 'course-editor' | 'lesson-player' | 'courses' | 'login' | 'register' | 'blade' | 'course-details' | 'certificates';
+type Page = 'home' | 'student-dashboard' | 'instructor-dashboard' | 'course-editor' | 'lesson-player' | 'courses' | 'login' | 'register' | 'blade' | 'course-details' | 'certificates' | 'instructor-analytics';
 type UserRole = 'student' | 'instructor' | null;
 
 interface AppProps {
@@ -31,6 +32,7 @@ interface AppProps {
         courses?: any[]; // For catalog
         enrolledCourseIds?: number[]; // IDs of courses user is enrolled in
         certificates?: any[]; // For certificates page
+        analyticsData?: any; // For instructor analytics page
     };
 }
 
@@ -120,6 +122,12 @@ export default function App({ initialData = {} }: AppProps) {
                 <CertificatesPage
                     certificates={initialData.certificates || []}
                     user={user!}
+                    onNavigate={handleNavigate}
+                />
+            )}
+            {currentPage === 'instructor-analytics' && initialData.analyticsData && (
+                <InstructorAnalytics
+                    data={initialData.analyticsData}
                     onNavigate={handleNavigate}
                 />
             )}

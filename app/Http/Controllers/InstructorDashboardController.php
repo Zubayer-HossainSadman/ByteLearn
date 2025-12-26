@@ -70,24 +70,37 @@ class InstructorDashboardController extends Controller
     public function courseAnalytics($courseId)
     {
         $instructor = Auth::user();
-        $course = Course::where('instructor_id', $instructor->id)->findOrFail($courseId);
+        $course = Course::where('instructor_id', $instructor->id)
+            ->with(['enrollments.user', 'reviews.user'])
+            ->findOrFail($courseId);
 
-        $enrollments = $course->enrollments()->with('user')->get();
+        // Total Enrollments
+        $totalEnrollments = $course->enrollments->count();
 
-        $totalStudents = $enrollments->count();
-        $completedCourses = 0;
-        foreach ($enrollments as $enrollment) {
-            if ($enrollment->isCompleted()) {
-                $completedCourses++;
-            }
+        // Enrollments This Week
+        $enrollmentsThisWeek = $course->enrollments()
+            ->where('created_at', '>=', now()->subWeek())
+            ->count();
+
+        // Course Rating Stats
+        $reviews = $course->reviews()->with('user')->orderBy('created_at', 'desc')->get();
+        $averageRating = $reviews->avg('rating') ?? 0;
+        $totalReviews = $reviews->count();
+
+        // Rating Distribution (1-5 stars)
+        $ratingDistribution = [];
+        for ($i = 5; $i >= 1; $i--) {
+            $ratingDistribution[$i] = $reviews->where('rating', $i)->count();
         }
 
         return view('instructor.course-analytics', [
             'course' => $course,
-            'enrollments' => $enrollments,
-            'totalStudents' => $totalStudents,
-            'completedCourses' => $completedCourses,
-            'completionRate' => $totalStudents > 0 ? round(($completedCourses / $totalStudents) * 100, 2) : 0,
+            'totalEnrollments' => $totalEnrollments,
+            'enrollmentsThisWeek' => $enrollmentsThisWeek,
+            'averageRating' => round($averageRating, 1),
+            'totalReviews' => $totalReviews,
+            'ratingDistribution' => $ratingDistribution,
+            'reviews' => $reviews,
         ]);
     }
 }
