@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Plus, Trash2, Edit, Save, X, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, X, GripVertical, ChevronUp, ChevronDown, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from './Button';
 import RichTextEditor from '../components/RichTextEditor';
 import { Course, Lesson } from '../types';
@@ -28,6 +28,16 @@ export const CourseEditor: React.FC<CourseEditorProps> = ({ courseId, onNavigate
         external_link: '',
         external_link_label: ''
     });
+
+    // Quiz State
+    interface QuizQuestion {
+        id?: number;
+        question: string;
+        options: string[];
+        correctAnswer: number;
+    }
+    const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+    const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
 
     const lessonFormRef = useRef<HTMLDivElement>(null);
 
@@ -94,9 +104,88 @@ export const CourseEditor: React.FC<CourseEditorProps> = ({ courseId, onNavigate
         });
         setEditingLessonId(lesson.id);
         setShowLessonForm(true);
+        // Load existing quiz questions
+        loadQuizQuestions(lesson.id);
         setTimeout(() => {
             lessonFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
+    };
+
+    const loadQuizQuestions = async (lessonId: number) => {
+        try {
+            const res = await axios.get(`/instructor/lesson/${lessonId}/quiz/questions`);
+            setQuizQuestions(res.data.questions || []);
+        } catch (error) {
+            console.error('Error loading quiz:', error);
+            setQuizQuestions([]);
+        }
+    };
+
+    const addEmptyQuestion = () => {
+        if (quizQuestions.length >= 6) {
+            alert('Maximum 6 questions allowed per lesson');
+            return;
+        }
+        setQuizQuestions([...quizQuestions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+    };
+
+    const updateQuestion = (index: number, field: string, value: any) => {
+        const updated = [...quizQuestions];
+        if (field === 'question') {
+            updated[index].question = value;
+        } else if (field === 'correctAnswer') {
+            updated[index].correctAnswer = value;
+        }
+        setQuizQuestions(updated);
+    };
+
+    const updateOption = (qIndex: number, oIndex: number, value: string) => {
+        const updated = [...quizQuestions];
+        updated[qIndex].options[oIndex] = value;
+        setQuizQuestions(updated);
+    };
+
+    const removeQuestion = (index: number) => {
+        setQuizQuestions(quizQuestions.filter((_, i) => i !== index));
+    };
+
+    const generateQuizWithAI = async () => {
+        if (!lessonData.title && !lessonData.content) {
+            alert('Please add lesson title and content before generating quiz.');
+            return;
+        }
+        setIsGeneratingQuiz(true);
+        try {
+            // We need the lesson ID for the API call, but for new lessons we don't have it yet
+            // For new lessons, save first then generate
+            if (!editingLessonId) {
+                alert('Please save the lesson first before generating quiz questions.');
+                setIsGeneratingQuiz(false);
+                return;
+            }
+            const res = await axios.post(`/instructor/lesson/${editingLessonId}/quiz/generate`, {
+                existingCount: quizQuestions.length,
+                lessonTitle: lessonData.title,
+                lessonContent: lessonData.content,
+                videoUrl: lessonData.video_url
+            });
+            if (res.data.questions) {
+                setQuizQuestions([...quizQuestions, ...res.data.questions]);
+            }
+        } catch (error: any) {
+            alert(error.response?.data?.error || 'Failed to generate quiz');
+        } finally {
+            setIsGeneratingQuiz(false);
+        }
+    };
+
+    const saveQuizQuestions = async (lessonId: number) => {
+        if (quizQuestions.length === 0) return;
+        try {
+            await axios.post(`/instructor/lesson/${lessonId}/quiz/save`, { questions: quizQuestions });
+        } catch (error) {
+            console.error('Error saving quiz:', error);
+        }
     };
 
     const handleSaveLesson = async (e: React.FormEvent) => {
@@ -128,10 +217,20 @@ export const CourseEditor: React.FC<CourseEditorProps> = ({ courseId, onNavigate
                     lessons: [...(prev.lessons || []), res.data]
                 } : null);
                 alert('Lesson added!');
+                // Save quiz for newly created lesson
+                if (res.data.id && quizQuestions.length > 0) {
+                    await saveQuizQuestions(res.data.id);
+                }
+            }
+
+            // Save quiz questions
+            if (editingLessonId && quizQuestions.length > 0) {
+                await saveQuizQuestions(editingLessonId);
             }
 
             setShowLessonForm(false);
             setLessonData({ title: '', content: '', video_url: '', pdf_url: '', external_link: '', external_link_label: '' });
+            setQuizQuestions([]);
         } catch (error) {
             console.error('Error saving lesson:', error);
             alert('Failed to save lesson');
@@ -257,6 +356,87 @@ export const CourseEditor: React.FC<CourseEditorProps> = ({ courseId, onNavigate
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Content</label>
                                     <RichTextEditor value={lessonData.content} onChange={(content) => setLessonData({ ...lessonData, content })} />
+                                </div>
+
+                                {/* Quiz Section */}
+                                <div className="border-t border-gray-200 pt-6 mt-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-lg font-semibold">Quiz Questions ({quizQuestions.length}/6)</h4>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={generateQuizWithAI}
+                                                disabled={isGeneratingQuiz || quizQuestions.length >= 6}
+                                                className="flex items-center gap-2"
+                                            >
+                                                {isGeneratingQuiz ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Sparkles className="w-4 h-4" />
+                                                )}
+                                                {isGeneratingQuiz ? 'Generating...' : 'Generate with AI'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={addEmptyQuestion}
+                                                disabled={quizQuestions.length >= 6}
+                                            >
+                                                <Plus className="w-4 h-4 mr-1" /> Add Question
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {quizQuestions.length === 0 ? (
+                                        <p className="text-gray-500 text-sm">No quiz questions yet. Add manually or generate with AI.</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {quizQuestions.map((q, qIndex) => (
+                                                <div key={qIndex} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <span className="text-sm font-medium text-gray-500">Question {qIndex + 1}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeQuestion(qIndex)}
+                                                            className="text-red-500 hover:text-red-700"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Enter your question"
+                                                        className="w-full p-2 border border-gray-300 rounded-lg mb-3"
+                                                        value={q.question}
+                                                        onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
+                                                    />
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {q.options.map((opt, oIndex) => (
+                                                            <div key={oIndex} className="flex items-center gap-2">
+                                                                <input
+                                                                    type="radio"
+                                                                    name={`correct-${qIndex}`}
+                                                                    checked={q.correctAnswer === oIndex}
+                                                                    onChange={() => updateQuestion(qIndex, 'correctAnswer', oIndex)}
+                                                                    className="w-4 h-4 text-indigo-600"
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
+                                                                    className={`flex-1 p-2 border rounded-lg text-sm ${q.correctAnswer === oIndex ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
+                                                                    value={opt}
+                                                                    onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex justify-end gap-3 pt-2">

@@ -222,25 +222,6 @@ export function StudentDashboard({ onNavigate, user, data }: StudentDashboardPro
                                 ))}
                             </div>
                         </section>
-
-                        {/* AI Learning Assistant */}
-                        <section className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-100">
-                            <div className="flex items-start gap-4">
-                                <div className="bg-purple-600 rounded-full p-3">
-                                    <Bot className="w-6 h-6 text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-xl font-semibold mb-2">AI Learning Assistant</h3>
-                                    <p className="text-gray-600 mb-4">
-                                        Get instant help with your courses. Ask questions about lesson content,
-                                        generate practice quizzes, or clarify concepts.
-                                    </p>
-                                    <button className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                                        Start Conversation
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
                     </div>
 
                     {/* Sidebar */}
@@ -314,14 +295,6 @@ export function StudentDashboard({ onNavigate, user, data }: StudentDashboardPro
                         <section className="bg-white rounded-xl shadow-sm p-5">
                             <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
                             <div className="space-y-2">
-                                <button className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-left flex items-center gap-3 transition-colors">
-                                    <MessageSquare className="w-5 h-5 text-gray-600" />
-                                    <span>Discussion Forum</span>
-                                </button>
-                                <button className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-left flex items-center gap-3 transition-colors">
-                                    <BarChart3 className="w-5 h-5 text-gray-600" />
-                                    <span>View Progress Report</span>
-                                </button>
                                 <a href="/student/certificates" className="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 rounded-lg text-left flex items-center gap-3 transition-colors border border-blue-200">
                                     <Award className="w-5 h-5 text-blue-600" />
                                     <span className="font-medium text-blue-700">My Certificates</span>

@@ -1,4 +1,12 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+// Configure axios CSRF token
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+if (csrfToken) {
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+}
 import { Navbar } from './components/Navbar';
 import { Homepage } from './components/Homepage';
 import { StudentDashboard } from './components/StudentDashboard';

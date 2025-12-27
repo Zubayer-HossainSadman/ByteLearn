@@ -99,6 +99,9 @@ Route::prefix('instructor')
         // Quiz Management
         Route::get('/lesson/{lessonId}/quiz/create', [QuizController::class, 'create'])->name('instructor.quizzes.create');
         Route::post('/lesson/{lessonId}/quiz', [QuizController::class, 'store'])->name('instructor.quizzes.store');
+        Route::get('/lesson/{lessonId}/quiz/questions', [QuizController::class, 'getQuestions'])->name('instructor.quizzes.getQuestions');
+        Route::post('/lesson/{lessonId}/quiz/save', [QuizController::class, 'saveQuestions'])->name('instructor.quizzes.saveQuestions');
+        Route::post('/lesson/{lessonId}/quiz/generate', [QuizController::class, 'generateWithAI'])->name('instructor.quizzes.generate');
     });
 
 // API Routes (Optional - for AJAX requests)

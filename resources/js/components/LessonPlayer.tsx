@@ -24,7 +24,29 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
     const [hoverRating, setHoverRating] = useState(0);
     const [ratingComment, setRatingComment] = useState('');
 
+    // Quiz State
+    interface QuizQuestion {
+        id?: number;
+        question: string;
+        options: string[];
+        correctAnswer: number;
+    }
+    const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+    const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number }>({});
+    const [showResults, setShowResults] = useState(false);
+    const [quizScore, setQuizScore] = useState(0);
+
+    // AI Chat State
+    interface ChatMessage {
+        role: 'user' | 'assistant';
+        content: string;
+    }
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [chatInput, setChatInput] = useState('');
+    const [isChatLoading, setIsChatLoading] = useState(false);
+
     const playerRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
     const isInstructor = user?.role === 'instructor';
 
     useEffect(() => {
@@ -50,6 +72,24 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
         };
         fetchCourse();
     }, [courseId, initialLessonId]);
+
+    // Fetch quiz questions when lesson changes
+    useEffect(() => {
+        const fetchQuiz = async () => {
+            if (!currentLesson) return;
+            try {
+                const res = await axios.get(`/api/lesson/${currentLesson.id}/quiz`);
+                setQuizQuestions(res.data.questions || []);
+                setSelectedAnswers({});
+                setShowResults(false);
+                setQuizScore(0);
+                setChatMessages([]); // Clear chat on lesson change
+            } catch (error) {
+                setQuizQuestions([]);
+            }
+        };
+        fetchQuiz();
+    }, [currentLesson]);
 
     // Initialize Plyr
     useEffect(() => {
@@ -120,10 +160,56 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
         }
     };
 
+    const handleAnswerSelect = (qIndex: number, optionIndex: number) => {
+        if (showResults) return;
+        setSelectedAnswers(prev => ({ ...prev, [qIndex]: optionIndex }));
+    };
+
+    const submitQuiz = () => {
+        let score = 0;
+        quizQuestions.forEach((q, idx) => {
+            if (selectedAnswers[idx] === q.correctAnswer) score++;
+        });
+        setQuizScore(score);
+        setShowResults(true);
+    };
+
+    const resetQuiz = () => {
+        setSelectedAnswers({});
+        setShowResults(false);
+        setQuizScore(0);
+    };
+
+    const sendChatMessage = async () => {
+        if (!chatInput.trim() || isChatLoading || !currentLesson) return;
+
+        const userMessage = chatInput.trim();
+        setChatInput('');
+        setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        setIsChatLoading(true);
+
+        try {
+            const res = await axios.post(`/api/lesson/${currentLesson.id}/chat`, {
+                message: userMessage
+            });
+            setChatMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }]);
+        } catch (error: any) {
+            setChatMessages(prev => [...prev, {
+                role: 'assistant',
+                content: error.response?.data?.error || 'Sorry, I could not respond. Please try again.'
+            }]);
+        } finally {
+            setIsChatLoading(false);
+            setTimeout(() => {
+                chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
+            }, 100);
+        }
+    };
+
     return (
         <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-white">
-            {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0">
+            {/* Left Sidebar - Lesson List */}
+            <div className="w-72 border-r border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0">
                 <div className="p-6 border-b border-gray-200">
                     <button onClick={() => onNavigate(isInstructor ? 'course-editor' : 'student-dashboard')} className="text-sm text-gray-500 hover:text-gray-900 mb-2 block">
                         ← Back to {isInstructor ? 'Editor' : 'Dashboard'}
@@ -149,14 +235,14 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8 lg:p-12">
-                <div className="max-w-4xl mx-auto">
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto p-6 lg:p-8">
+                <div className="max-w-6xl mx-auto">
                     <h1 className="text-3xl font-bold text-gray-900 mb-6">{currentLesson.title}</h1>
 
                     {/* Video */}
                     {currentLesson.video_url && (
-                        <div className="mb-8 relative rounded-xl overflow-hidden shadow-lg bg-black aspect-video">
+                        <div key={`video-${currentLesson.id}`} className="mb-8 relative rounded-xl overflow-hidden shadow-lg bg-black aspect-video">
                             {getYouTubeId(currentLesson.video_url) ? (
                                 <div className="plyr__video-embed" ref={playerRef} data-plyr-provider="youtube" data-plyr-embed-id={getYouTubeId(currentLesson.video_url)} />
                             ) : (
@@ -190,7 +276,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
                     )}
 
                     {/* Links & Resources */}
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="mt-8 space-y-4">
                         {currentLesson.pdf_url && (
                             <a href={currentLesson.pdf_url} download target="_blank" rel="noreferrer" className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:shadow-md transition-all group bg-white">
                                 <div className="flex items-center gap-3">
@@ -213,6 +299,71 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
                                 </div>
                             </a>
                         )}
+                    </div>
+
+                    {/* AI Chat Assistant */}
+                    <div className="mt-10 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xl">🤖</div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900">AI Learning Assistant</h3>
+                                <p className="text-sm text-gray-600">Need clarification? Ask your questions about this lesson here</p>
+                            </div>
+                        </div>
+
+                        {/* Chat Messages */}
+                        {chatMessages.length > 0 && (
+                            <div
+                                ref={chatContainerRef}
+                                className="bg-white rounded-lg border border-gray-200 p-4 mb-4 max-h-64 overflow-y-auto space-y-3"
+                            >
+                                {chatMessages.map((msg, idx) => (
+                                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[80%] p-3 rounded-lg ${msg.role === 'user'
+                                            ? 'bg-indigo-600 text-white rounded-br-sm'
+                                            : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+                                            }`}>
+                                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {isChatLoading && (
+                                    <div className="flex justify-start">
+                                        <div className="bg-gray-100 text-gray-600 p-3 rounded-lg rounded-bl-sm">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Chat Input */}
+                        <div className="flex gap-3">
+                            <input
+                                type="text"
+                                value={chatInput}
+                                onChange={(e) => setChatInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+                                placeholder="Type your question about this lesson..."
+                                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                disabled={isChatLoading}
+                            />
+                            <button
+                                onClick={sendChatMessage}
+                                disabled={isChatLoading || !chatInput.trim()}
+                                className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                            >
+                                {isChatLoading ? (
+                                    <span className="animate-spin">⏳</span>
+                                ) : (
+                                    <>Send</>
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Pagination - Hide Complete for Instructor */}
@@ -296,6 +447,83 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ courseId, initialLes
                     </div>
                 )}
             </div>
+
+            {/* Right Sidebar - Quiz Panel */}
+            {quizQuestions.length > 0 && (
+                <div className="w-96 border-l border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0">
+                    <div className="p-6 border-b border-gray-200">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            📝 Lesson Quiz
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">{quizQuestions.length} question{quizQuestions.length > 1 ? 's' : ''}</p>
+                    </div>
+
+                    <div className="p-4 space-y-6">
+                        {quizQuestions.map((q, qIndex) => (
+                            <div key={qIndex} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <p className="font-medium text-gray-900 mb-3">
+                                    <span className="text-indigo-600 mr-2">Q{qIndex + 1}.</span>
+                                    {q.question}
+                                </p>
+                                <div className="space-y-2">
+                                    {q.options.map((opt, oIndex) => {
+                                        const isSelected = selectedAnswers[qIndex] === oIndex;
+                                        const isCorrect = q.correctAnswer === oIndex;
+                                        let optionClass = 'border-gray-200 hover:border-indigo-300 bg-white';
+
+                                        if (showResults) {
+                                            if (isCorrect) {
+                                                optionClass = 'border-green-500 bg-green-50 text-green-800';
+                                            } else if (isSelected && !isCorrect) {
+                                                optionClass = 'border-red-500 bg-red-50 text-red-800';
+                                            }
+                                        } else if (isSelected) {
+                                            optionClass = 'border-indigo-500 bg-indigo-50 text-indigo-800';
+                                        }
+
+                                        return (
+                                            <button
+                                                key={oIndex}
+                                                onClick={() => handleAnswerSelect(qIndex, oIndex)}
+                                                disabled={showResults}
+                                                className={`w-full text-left p-3 rounded-lg border transition-all ${optionClass} ${!showResults ? 'cursor-pointer' : 'cursor-default'}`}
+                                            >
+                                                <span className="font-medium mr-2">{String.fromCharCode(65 + oIndex)}.</span>
+                                                {opt}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Quiz Actions */}
+                        <div className="pt-4 border-t border-gray-200">
+                            {showResults ? (
+                                <div className="text-center">
+                                    <div className={`text-2xl font-bold mb-2 ${quizScore === quizQuestions.length ? 'text-green-600' : quizScore >= quizQuestions.length / 2 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                        {quizScore} / {quizQuestions.length}
+                                    </div>
+                                    <p className="text-gray-600 mb-4">
+                                        {quizScore === quizQuestions.length ? '🎉 Perfect!' : quizScore >= quizQuestions.length / 2 ? '👍 Good job!' : '📚 Keep learning!'}
+                                    </p>
+                                    <Button onClick={resetQuiz} variant="outline" className="w-full">
+                                        Try Again
+                                    </Button>
+                                </div>
+                            ) : (
+                                <Button
+                                    onClick={submitQuiz}
+                                    disabled={Object.keys(selectedAnswers).length < quizQuestions.length}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                                >
+                                    Submit Quiz
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

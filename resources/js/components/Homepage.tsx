@@ -1,58 +1,40 @@
+import { useState, useEffect } from 'react';
 import { BookOpen, Users, Award, TrendingUp, Sparkles, MessageSquare, Play, Star, Clock, ArrowRight } from 'lucide-react';
 import { ImageWithFallback } from './ImageWithFallback';
 import { ByteLearnLogo, ByteLearnLogoText } from './ByteLearnLogo';
+import axios from 'axios';
 
 interface HomepageProps {
     onNavigate?: (page: string) => void;
 }
 
+interface FeaturedCourse {
+    id: number;
+    title: string;
+    instructor: string;
+    image: string;
+    rating: number;
+    students: number;
+    lessons: number;
+    duration: string;
+    level: string;
+}
+
 export function Homepage({ onNavigate }: HomepageProps) {
-    const featuredCourses = [
-        {
-            id: 1,
-            title: "Complete Web Development Bootcamp",
-            instructor: "Sarah Johnson",
-            image: "https://images.unsplash.com/photo-1557324232-b8917d3c3dcb?w=800",
-            rating: 4.8,
-            students: 1250,
-            lessons: 48,
-            duration: "12 weeks",
-            level: "Beginner"
-        },
-        {
-            id: 2,
-            title: "Business Strategy & Management",
-            instructor: "Michael Chen",
-            image: "https://images.unsplash.com/photo-1707301280425-475534ec3cc1?w=800",
-            rating: 4.9,
-            students: 890,
-            lessons: 32,
-            duration: "8 weeks",
-            level: "Intermediate"
-        },
-        {
-            id: 3,
-            title: "UI/UX Design Fundamentals",
-            instructor: "Emma Wilson",
-            image: "https://images.unsplash.com/photo-1763191213523-1489179a1088?w=800",
-            rating: 4.7,
-            students: 2100,
-            lessons: 40,
-            duration: "10 weeks",
-            level: "Beginner"
-        },
-        {
-            id: 4,
-            title: "Digital Marketing Mastery",
-            instructor: "David Park",
-            image: "https://images.unsplash.com/photo-1599658880436-c61792e70672?w=800",
-            rating: 4.6,
-            students: 1540,
-            lessons: 36,
-            duration: "9 weeks",
-            level: "All Levels"
-        }
-    ];
+    const [featuredCourses, setFeaturedCourses] = useState<FeaturedCourse[]>([]);
+
+    useEffect(() => {
+        const fetchFeaturedCourses = async () => {
+            try {
+                const res = await axios.get('/api/courses/featured');
+                setFeaturedCourses(res.data || []);
+            } catch (error) {
+                console.error('Failed to fetch featured courses:', error);
+                setFeaturedCourses([]);
+            }
+        };
+        fetchFeaturedCourses();
+    }, []);
 
     const features = [
         {

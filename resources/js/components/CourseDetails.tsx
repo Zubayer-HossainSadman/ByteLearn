@@ -37,8 +37,8 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ course, user, onNa
     return (
         <div className="bg-gray-50 min-h-screen pb-12">
             {/* Hero Section */}
-            <div className="bg-indigo-900 text-white py-16 lg:py-24 relative overflow-hidden">
-                <div className="absolute inset-0 bg-indigo-800 opacity-50"></div>
+            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white py-16 lg:py-24 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-indigo-900/20"></div>
                 <div className="container mx-auto px-6 relative z-10">
                     <div className="max-w-4xl mx-auto">
                         <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -64,18 +64,18 @@ export const CourseDetails: React.FC<CourseDetailsProps> = ({ course, user, onNa
                                                 <Star key={i} className="w-4 h-4 fill-current" />
                                             ))}
                                         </div>
-                                        <span>4.8 (120 reviews)</span>
+                                        <span>{(course as any).average_rating || '4.5'} ({(course as any).reviews_count || 0} reviews)</span>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <Button
                                         size="lg"
-                                        className="bg-white text-indigo-900 hover:bg-gray-100 border-0 font-bold px-8"
+                                        className="bg-white !text-blue-700 hover:bg-blue-50 border-0 font-bold px-8 shadow-lg"
                                         onClick={handleEnroll}
                                         disabled={loading || enrolled}
                                     >
-                                        {loading ? 'Enrolling...' : enrolled ? 'Enrolled' : 'Enroll Now - Start Learning'}
+                                        {loading ? 'Enrolling...' : enrolled ? 'Enrolled ✓' : 'Enroll Now - Start Learning'}
                                     </Button>
                                     <span className="text-sm self-center text-indigo-200 flex items-center gap-1">
                                         <Award className="w-4 h-4" />
